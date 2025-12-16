@@ -30,11 +30,13 @@ class InputLogger:
         session_id: str,
         window_id: str,
         capture_allowed_fn: Optional[Callable[[], bool]] = None,
+        window_bbox: Optional[Dict[str, int]] = None,
     ):
         self.events = event_queue
         self.session_id = session_id
         self.window_id = window_id
         self.capture_allowed_fn = capture_allowed_fn or (lambda: True)
+        self.window_bbox = window_bbox
         self.stop_event = threading.Event()
         self.keyboard_listener = keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release)
         self.mouse_listener = mouse.Listener(
@@ -53,13 +55,27 @@ class InputLogger:
     def _emit(self, event_type: str, **kwargs):
         if not self.capture_allowed_fn():
             return
-        metadata = kwargs.pop("metadata", None)
+        metadata = kwargs.pop("metadata", None) or {}
+        if self.window_bbox and kwargs.get("mouse_x") is not None and kwargs.get("mouse_y") is not None:
+            try:
+                abs_x = float(kwargs["mouse_x"])
+                abs_y = float(kwargs["mouse_y"])
+                left = float(self.window_bbox["left"])
+                top = float(self.window_bbox["top"])
+                width = float(self.window_bbox["width"])
+                height = float(self.window_bbox["height"])
+                if width > 0 and height > 0:
+                    kwargs["mouse_x"] = (abs_x - left) / width
+                    kwargs["mouse_y"] = (abs_y - top) / height
+                    metadata = {**metadata, "abs_x": str(abs_x), "abs_y": str(abs_y)}
+            except Exception:
+                pass
         ev = InputEvent(
             t_ns=time.monotonic_ns(),
             event_type=event_type,
             window_id=self.window_id,
             session_id=self.session_id,
-            metadata=metadata,
+            metadata=metadata or None,
             **kwargs,
         )
         self.events.put(ev)
@@ -89,4 +105,3 @@ class InputLogger:
 
     def on_move(self, x, y):
         self._emit("mouse_move", mouse_x=x, mouse_y=y)
-

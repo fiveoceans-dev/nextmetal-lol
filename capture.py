@@ -32,9 +32,9 @@ def _parse_resolution(val: Optional[str]) -> Optional[Tuple[int, int]]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Capture screen + inputs for LoL sessions.")
-    parser.add_argument("--duration", type=int, default=0, help="Capture duration in seconds (0 = until Ctrl+C)")
-    parser.add_argument("--fps", type=int, default=DEFAULT_FPS, help="Capture FPS")
+    parser = argparse.ArgumentParser(description="Capture screen + inputs for LoL sessions. Press 'q' in terminal to stop gracefully.")
+    parser.add_argument("--duration", type=int, default=0, help="Capture duration in seconds (0 = until Ctrl+C or 'q')")
+    parser.add_argument("--fps", type=int, default=DEFAULT_FPS, help="Capture FPS (default: 30)")
     parser.add_argument(
         "--allow-any",
         action="store_true",
