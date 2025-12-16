@@ -3,7 +3,7 @@ from __future__ import annotations
 import platform
 import subprocess
 import time
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 ALLOWED_APP_NAMES = {
     "League of Legends",
@@ -77,6 +77,40 @@ def window_bbox(candidate_names: Iterable[str]) -> Optional[Dict[str, int]]:
                     Quartz.AXIsProcessTrustedWithOptions({Quartz.kAXTrustedCheckOptionPrompt: True})
                     AX_PROMPTED = True
 
+                def _scale_darwin_bounds(win: Dict[str, Any], bounds: Dict[str, int]) -> Optional[Dict[str, Any]]:
+                    width_pt = float(bounds.get("Width", 0) or 0)
+                    height_pt = float(bounds.get("Height", 0) or 0)
+                    window_number = int(win.get("kCGWindowNumber") or 0)
+                    if width_pt <= 0 or height_pt <= 0 or window_number <= 0:
+                        return None
+                    try:
+                        image = Quartz.CGWindowListCreateImage(
+                            Quartz.CGRectNull,
+                            Quartz.kCGWindowListOptionIncludingWindow,
+                            window_number,
+                            Quartz.kCGWindowImageBoundsIgnoreFraming,
+                        )
+                        if not image:
+                            return None
+                        width_px = Quartz.CGImageGetWidth(image)
+                        height_px = Quartz.CGImageGetHeight(image)
+                        if width_px <= 0 or height_px <= 0:
+                            return None
+                        scale_x = float(width_px) / width_pt
+                        scale_y = float(height_px) / height_pt if height_pt else scale_x
+                        left_px = int(round(float(bounds.get("X", 0) or 0) * scale_x))
+                        top_px = int(round(float(bounds.get("Y", 0) or 0) * scale_y))
+                        return {
+                            "left": left_px,
+                            "top": top_px,
+                            "width": int(round(width_px)),
+                            "height": int(round(height_px)),
+                            "scale_x": scale_x,
+                            "scale_y": scale_y,
+                        }
+                    except Exception:
+                        return None
+
                 def _match_window_list(list_option):
                     window_list = Quartz.CGWindowListCopyWindowInfo(list_option, Quartz.kCGNullWindowID)
                     matches: List[Dict[str, int]] = []
@@ -93,7 +127,18 @@ def window_bbox(candidate_names: Iterable[str]) -> Optional[Dict[str, int]]:
                             width = int(bounds.get("Width", 0))
                             height = int(bounds.get("Height", 0))
                             if width > 1 and height > 1:
-                                matches.append({"left": left, "top": top, "width": width, "height": height})
+                                pixel_rect = _scale_darwin_bounds(win, bounds) or {}
+                                rect = {"left": left, "top": top, "width": width, "height": height}
+                                if pixel_rect:
+                                    rect["pixel_rect"] = {
+                                        "left": pixel_rect["left"],
+                                        "top": pixel_rect["top"],
+                                        "width": pixel_rect["width"],
+                                        "height": pixel_rect["height"],
+                                    }
+                                    rect["scale_x"] = pixel_rect.get("scale_x")
+                                    rect["scale_y"] = pixel_rect.get("scale_y")
+                                matches.append(rect)
                     return matches
 
                 matches = _match_window_list(Quartz.kCGWindowListOptionOnScreenOnly)
@@ -123,7 +168,21 @@ def window_bbox(candidate_names: Iterable[str]) -> Optional[Dict[str, int]]:
                             width = int(size.width)
                             height = int(size.height)
                             if width > 1 and height > 1:
-                                return {"left": left, "top": top, "width": width, "height": height}
+                                rect = {"left": left, "top": top, "width": width, "height": height}
+                                pixel_rect = _scale_darwin_bounds(
+                                    {"kCGWindowNumber": app.processIdentifier()},
+                                    {"X": left, "Y": top, "Width": width, "Height": height},
+                                )
+                                if pixel_rect:
+                                    rect["pixel_rect"] = {
+                                        "left": pixel_rect["left"],
+                                        "top": pixel_rect["top"],
+                                        "width": pixel_rect["width"],
+                                        "height": pixel_rect["height"],
+                                    }
+                                    rect["scale_x"] = pixel_rect.get("scale_x")
+                                    rect["scale_y"] = pixel_rect.get("scale_y")
+                                return rect
             except Exception:
                 pass
 
@@ -156,7 +215,21 @@ def window_bbox(candidate_names: Iterable[str]) -> Optional[Dict[str, int]]:
                 except Exception:
                     continue
                 if width > 1 and height > 1:
-                    return {"left": left, "top": top, "width": width, "height": height}
+                    rect = {"left": left, "top": top, "width": width, "height": height}
+                    pixel_rect = _scale_darwin_bounds(
+                        {"kCGWindowNumber": None},
+                        {"X": left, "Y": top, "Width": width, "Height": height},
+                    )
+                    if pixel_rect:
+                        rect["pixel_rect"] = {
+                            "left": pixel_rect["left"],
+                            "top": pixel_rect["top"],
+                            "width": pixel_rect["width"],
+                            "height": pixel_rect["height"],
+                        }
+                        rect["scale_x"] = pixel_rect.get("scale_x")
+                        rect["scale_y"] = pixel_rect.get("scale_y")
+                    return rect
             return None
 
         if system == "Windows":
@@ -275,4 +348,3 @@ def wait_for_capture_target(
             last_log = now
         time.sleep(poll_seconds)
     return None
-

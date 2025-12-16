@@ -32,7 +32,7 @@ def _parse_resolution(val: Optional[str]) -> Optional[Tuple[int, int]]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Capture screen + inputs for LoL sessions. Press 'q' in terminal to stop gracefully.")
+    parser = argparse.ArgumentParser(description="Capture screen + inputs + audio for LoL sessions. Press 'q' in terminal to stop gracefully.")
     parser.add_argument("--duration", type=int, default=0, help="Capture duration in seconds (0 = until Ctrl+C or 'q')")
     parser.add_argument("--fps", type=int, default=DEFAULT_FPS, help="Capture FPS (default: 30)")
     parser.add_argument(
@@ -63,7 +63,48 @@ def main():
         default=None,
         help="Webcam resolution as WIDTHxHEIGHT (e.g., 1280x720). Defaults to device setting.",
     )
+    parser.add_argument(
+        "--audio",
+        action="store_true",
+        help="Record system audio from League of Legends (macOS only)",
+    )
+    parser.add_argument(
+        "--audio-device",
+        type=str,
+        default=None,
+        help="Name of macOS audio loopback device for embedded capture (e.g., 'BlackHole 2ch')",
+    )
+    parser.add_argument(
+        "--check-audio",
+        action="store_true",
+        help="Check audio capture setup and provide configuration guidance",
+    )
     args = parser.parse_args()
+
+    # Handle audio setup check
+    if args.check_audio:
+        from capture_lib.audio_recorder import AudioRecorder
+        from pathlib import Path
+
+        recorder = AudioRecorder(
+            output_dir=Path("."),  # Dummy path
+            fps=30,
+            session_id="test",
+            capture_allowed_fn=lambda: True
+        )
+
+        setup = recorder.check_audio_setup()
+        print("🎵 Audio Capture Setup Check:")
+        print(f"   FFmpeg available: {'✅' if setup['ffmpeg_available'] else '❌'}")
+        print(f"   BlackHole available: {'✅' if setup['blackhole_available'] else '❌'}")
+        print()
+        print("📋 Setup Recommendations:")
+        for rec in setup['recommended_setup']:
+            print(f"   • {rec}")
+        print()
+        print("🎮 To test audio capture:")
+        print("   python capture.py --audio --duration 5")
+        return
 
     run_capture_session(
         duration_seconds=args.duration or None,
@@ -73,9 +114,10 @@ def main():
         enable_webcam=args.webcam,
         webcam_device=args.webcam_device,
         webcam_resolution=args.webcam_resolution,
+        enable_audio=args.audio,
+        audio_device=args.audio_device,
     )
 
 
 if __name__ == "__main__":
     main()
-

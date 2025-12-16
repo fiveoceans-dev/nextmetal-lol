@@ -9,7 +9,8 @@ Purpose: produce lossless-enough, time-synchronized traces that flow directly in
 ```
 session_YYYYMMDD_HHMMSS/
 ├── frames.mp4               # H.264/H.265 video with per-frame timestamps
-├── events.parquet           # Input + system events, time-aligned
+├── events.parquet           # Input + system events, time-aligned (columnar)
+├── events.csv               # Human-readable mirror of events.parquet
 ├── audio.mp4 (optional)     # Voice/game audio, timestamped
 ├── metadata.json            # Capture + system metadata
 └── integrity.sha256         # Hashes of all artifacts
@@ -42,7 +43,10 @@ Versioning: metadata.json includes `format_version` (semver). Changes to schema 
 | Column | Type | Notes |
 |--------|------|-------|
 | `t_ns` | int64 | Monotonic timestamp |
-| `event_type` | string | `key_down`, `key_up`, `mouse_move`, `mouse_click`, `wheel`, `focus`, `frame` |
+| `t_capture_ns` | int64, nullable | Wall-clock capture time (when available) |
+| `is_duplicate` | bool, nullable | Whether the frame was padded/duplicated |
+| `event_type` | string | `key_down`, `key_up`, `mouse_move`, `mouse_click`, `wheel`, `frame` |
+| `stream` | string | `input`, `screen`, `webcam`, `audio` |
 | `key_code` | int32, nullable | Key code when applicable |
 | `mouse_x` | float32, nullable | Normalized 0–1 relative to window |
 | `mouse_y` | float32, nullable | Normalized 0–1 relative to window |
@@ -51,7 +55,6 @@ Versioning: metadata.json includes `format_version` (semver). Changes to schema 
 | `frame_ref` | int64, nullable | Frame index for alignment |
 | `window_id` | string | Active window identifier |
 | `session_id` | string | UUID |
-| `hash` | string | Integrity hash of the row payload |
 | `metadata` | map<string, string> | Extensible key/values (e.g., ping, FPS) |
 
 Rows are append-only per session. Compression: Snappy or ZSTD. Partition: one Parquet file per session to start; shard later if needed.

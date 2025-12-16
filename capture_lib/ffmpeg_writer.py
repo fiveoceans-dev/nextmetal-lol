@@ -51,6 +51,8 @@ class FfmpegVideoWriter:
                 "-hide_banner",
                 "-loglevel",
                 "error",
+                "-fflags",
+                "+genpts",  # Generate presentation timestamps
                 "-f",
                 "rawvideo",
                 "-pix_fmt",
@@ -58,16 +60,32 @@ class FfmpegVideoWriter:
                 "-s",
                 f"{self.width}x{self.height}",
                 "-r",
-                str(self.fps),
+                str(self.fps),  # Input framerate
                 "-i",
                 "-",
                 "-an",
                 "-c:v",
                 enc,
+                "-f",
+                "mp4",  # Explicit MP4 format
+                "-r",
+                str(self.fps),  # Output framerate
+                "-g",
+                str(self.fps // 2),  # GOP size = 0.5 seconds for better timing
+                "-keyint_min",
+                str(self.fps // 2),  # Minimum keyframe interval
+                "-sc_threshold",
+                "0",  # Disable scene change detection for consistent timing
+                "-avoid_negative_ts",
+                "make_zero",  # Handle timestamp issues
+                "-vsync",
+                "cfr",  # Constant frame rate
+                "-movflags",
+                "+faststart",  # Put metadata at start of file
             ]
 
             if enc == "libx264":
-                cmd += ["-preset", "ultrafast", "-crf", "18"]
+                cmd += ["-preset", "fast", "-crf", "18", "-tune", "zerolatency"]
             elif enc == "h264_videotoolbox":
                 # VideoToolbox prefers bitrate control.
                 if self.bitrate_kbps:
@@ -102,10 +120,23 @@ class FfmpegVideoWriter:
             raise RuntimeError("ffmpeg stdin not available")
 
     def write(self, frame_bytes: bytes) -> None:
-        if not self.proc.stdin:
-            raise RuntimeError("ffmpeg stdin closed")
+        if not self.proc or not self.proc.stdin:
+            raise RuntimeError("ffmpeg process not initialized or stdin closed")
+
+        # Check if ffmpeg process is still alive
+        if self.proc.poll() is not None:
+            err = b""
+            if self.proc.stderr:
+                try:
+                    err = self.proc.stderr.read()
+                except Exception:
+                    err = b""
+            raise RuntimeError(f"ffmpeg process died unexpectedly: {err.decode(errors='ignore')}")
+
         try:
             self.proc.stdin.write(frame_bytes)
+            # Flush to ensure data is sent immediately
+            self.proc.stdin.flush()
         except BrokenPipeError as exc:
             err = b""
             if self.proc.stderr:
@@ -114,6 +145,8 @@ class FfmpegVideoWriter:
                 except Exception:
                     err = b""
             raise RuntimeError(f"ffmpeg pipe broke: {err.decode(errors='ignore')}") from exc
+        except Exception as exc:
+            raise RuntimeError(f"Failed to write frame to ffmpeg: {exc}") from exc
 
     def close(self, timeout_s: float = 10.0) -> None:
         if self.proc.stdin:
