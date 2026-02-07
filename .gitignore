@@ -39,3 +39,7 @@ out/
 .env
 .env.local
 .vscode/
+
+
+NitroGen/
+alphastar/
