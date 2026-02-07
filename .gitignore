@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+.venv/
+venv/
+venv.bak/
+.mypy_cache/
+.pytest_cache/
+.vscode/
+
+# Distribution / build artifacts
+.eggs/
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# TypeScript
+*.tsbuildinfo
+
+# React
+build/
+.next/
+out/
+
+# IDE and OS files
+.DS_Store
+.env
+.env.local
+.vscode/
