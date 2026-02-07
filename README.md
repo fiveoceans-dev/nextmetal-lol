@@ -1,8 +1,7 @@
-# League of Legends AI Capture System
+# ICML Tutorial: Raw screen pixel–based League of Legends control
 
-A high-performance multimodal data collection system for autonomous League of Legends AI development. Captures screen gameplay, webcam footage, and keyboard/mouse inputs with precise synchronization for machine learning training.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - **Python 3.12+**
@@ -57,7 +56,7 @@ python capture.py --audio --duration 5
 # Play some audio and check if session_*/audio.wav is created
 ```
 
-## 🎮 Usage
+## Usage
 
 ### Basic Capture
 ```bash
@@ -122,14 +121,14 @@ session_20241216_143022/
 
 ### Data Specifications
 
-**🎥 Video Format (ML-Optimized):**
+** Video Format (ML-Optimized):**
 - **Codec**: H.264 with CRF 18 (high quality, efficient compression)
 - **Frame Rate**: 30 FPS constant (matches AlphaStar standard)
 - **Resolution**: Native game resolution (typically 1920x1080)
 - **Color Space**: YUV420p (standard for ML pipelines)
 - **Encoding**: Fast preset with zerolatency tuning
 
-**🔊 Audio Format (System Audio):**
+** Audio Format (System Audio):**
 - **Embedded**: When `--audio` is enabled on macOS, `frames.mp4` includes an AAC track captured directly from the loopback device (BlackHole or similar). A synchronized `audio.wav` is also extracted for ML pipelines.
 - **Format**: WAV (uncompressed, high quality) when exported
 - **Sample Rate**: 44.1 kHz (CD quality)
@@ -139,20 +138,20 @@ session_20241216_143022/
 - **Note**: Captures what you hear from League of Legends, not microphone input
 - **Use Cases**: Game sound analysis, ability sound detection, ambient audio context
 
-**🎮 Input Events (RL-Compatible):**
+** Input Events (RL-Compatible):**
 - **Timestamps**: Nanosecond precision with monotonic guarantees
 - **Synchronization**: Frame-aligned correlation (events linked to video frames)
 - **Format**: Parquet + CSV for downstream ML + quick inspection
 - **Fields**: timestamp, event_type, key_code, mouse_coords, frame_ref
 
-**🎵 Audio Use Cases for AI Training:**
+** Audio Use Cases for AI Training:**
 - **Sound-based Rewards**: Ability sounds, combat audio cues
 - **Voice Analysis**: Team communication patterns
 - **Environmental Context**: Music, ambient sounds, game state audio
 - **Multimodal Learning**: Combined vision + audio + input understanding
 - **Anomaly Detection**: Unusual audio patterns during gameplay
 
-**📊 Metadata (RL Dataset Standard):**
+** Metadata (RL Dataset Standard):**
 - **Compatibility**: RLDS, D4RL, OpenAI Gym compatible
 - **Validation**: Data integrity checks and quality metrics
 - **Trajectories**: Automatic segmentation into 60s training episodes
@@ -176,7 +175,7 @@ rg -n "" session_20241216_143022/events.csv | head
 
 Pro tip: `events.parquet` + `metadata.json` is the canonical data for training; `events.csv` is meant for reviews, diffing, or debugging.
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -222,7 +221,7 @@ sudo apt install ffmpeg
 - **Use SSD storage** for output directory
 - **Monitor system resources** during capture
 
-## 🧪 Development
+## Development
 
 ### Project Structure
 ```
@@ -236,10 +235,6 @@ sudo apt install ffmpeg
 │   ├── ffmpeg_writer.py   # Video encoding
 │   └── constants.py       # Configuration
 ├── MASTERPLAN.md          # System architecture
-├── system0.md            # Core infrastructure
-├── system1.md            # Watch-Mode (data collection)
-├── system2.md            # Developer-Mode (AI training)
-└── system3.md            # Game-Mode (autonomous play)
 ```
 
 ### Adding Features
@@ -247,46 +242,26 @@ sudo apt install ffmpeg
 - Update `capture.py` for CLI options
 - Test with `--allow-any` flag for development
 
-## 🔬 Research & Standards
+## Research & Standards
 
 Based on analysis of leading game AI projects (DeepMind AlphaStar, OpenAI Dota 2):
 
-**🎯 Key Findings:**
+** Key Findings:**
 - **Video Quality**: H.264 MP4 with CRF 18-23 provides optimal quality/size balance for ML training
 - **Frame Rate**: 30 FPS captures APM while maintaining manageable file sizes
 - **Input Sync**: Nanosecond timestamps with frame alignment essential for RL training
 - **Dataset Format**: Parquet + JSON metadata compatible with major RL frameworks
 
-**✅ Implemented Standards:**
+** Implemented Standards:**
 - Data validation and integrity checking
 - Trajectory segmentation for RL training episodes
 - Multimodal synchronization guarantees
 - Quality metrics and error detection
 
-## 📊 Data Pipeline
+## Data Pipeline
 
 This capture system feeds into the full AI pipeline:
 
 1. **Watch-Mode** (this system): Collect expert gameplay data with validation
 2. **Developer-Mode**: Train AI models on trajectory-segmented data
 3. **Game-Mode**: Deploy trained AI for autonomous play
-
-See `MASTERPLAN.md` for complete system architecture.
-
-## ⚖️ Legal & Ethical
-
-- **Research Only**: Designed for academic and research purposes
-- **Privacy First**: Captures only active gameplay windows
-- **Riot Compliance**: Respects League of Legends terms of service
-- **Data Control**: All captured data remains local to your machine
-
-## 🤝 Contributing
-
-1. Follow the existing code structure
-2. Test on multiple platforms when possible
-3. Update documentation for new features
-4. Ensure graceful error handling
-
----
-
-**Built for the future of competitive gaming AI** ⚡🎮
